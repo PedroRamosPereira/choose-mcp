@@ -1,18 +1,18 @@
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&height=180&color=0:1e293b,100:3178c6&text=jev-filter-mcp&fontColor=ffffff&fontSize=48&fontAlignY=35&desc=Decis%C3%B5es%20estruturadas%20para%20agentes%20de%20IA&descAlignY=58" alt="jev-filter-mcp" width="100%">
+<img src="https://capsule-render.vercel.app/api?type=waving&height=180&color=0:1e293b,100:3178c6&text=choose-mcp&fontColor=ffffff&fontSize=48&fontAlignY=35&desc=Decis%C3%B5es%20estruturadas%20para%20agentes%20de%20IA&descAlignY=58" alt="choose-mcp" width="100%">
 
 [![Node](https://img.shields.io/badge/node-%3E%3D22-339933?logo=node.js&logoColor=white)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](tsconfig.json)
 [![MCP](https://img.shields.io/badge/MCP-stdio-111111)](https://modelcontextprotocol.io)
 [![License](https://img.shields.io/badge/license-ISC-blue)](LICENSE)
-[![Stars](https://img.shields.io/github/stars/PedroRamosPereira/jev-mcp?style=flat&logo=github)](https://github.com/PedroRamosPereira/jev-mcp/stargazers)
+[![Stars](https://img.shields.io/github/stars/PedroRamosPereira/choose-mcp?style=flat&logo=github)](https://github.com/PedroRamosPereira/choose-mcp/stargazers)
 
 [English](README.md) · **Português**
 
 </div>
 
-Servidor [MCP](https://modelcontextprotocol.io) com uma ferramenta, **`jev_choose`**. Seu agente envia um contexto, uma pergunta e uma lista de opções. O servidor responde com a escolha, a probabilidade de cada opção e um sinal de incerteza.
+Servidor [MCP](https://modelcontextprotocol.io) com uma ferramenta, **`choose`**. Seu agente envia um contexto, uma pergunta e uma lista de opções. O servidor responde com a escolha, a probabilidade de cada opção e um sinal de incerteza.
 
 Dois backends intercambiáveis produzem as probabilidades:
 
@@ -24,7 +24,7 @@ A ferramenta, a entrada e a saída são as mesmas nos dois.
 ## Início rápido
 
 ```bash
-git clone https://github.com/PedroRamosPereira/jev-mcp.git && cd jev-mcp
+git clone https://github.com/PedroRamosPereira/choose-mcp.git && cd choose-mcp
 npm install && npm run build
 ```
 
@@ -32,17 +32,17 @@ Escolha um backend:
 
 ```bash
 # Qualquer LLM compatível com OpenAI (aqui: um Ollama local)
-claude mcp add jev -e JEV_LLM_MODEL=qwen2.5:7b-instruct -- node "$PWD/dist/index.js"
+claude mcp add choose -e CHOOSE_LLM_MODEL=qwen2.5:7b-instruct -- node "$PWD/dist/index.js"
 
 # ou o Jev da TypeSafe
-claude mcp add jev -e TYPESAFE_API_KEY=sua-chave -- node "$PWD/dist/index.js"
+claude mcp add choose -e TYPESAFE_API_KEY=sua-chave -- node "$PWD/dist/index.js"
 ```
 
 ## Por que existe
 
 Agentes escolhem entre opções o tempo todo: qual agente pega a tarefa, quanto esforço ela merece, qual resultado é o melhor, quais itens de uma lista importam. Quando o LLM decide no meio da própria resposta, você recebe a decisão sem nenhuma medida de confiança.
 
-O `jev_choose` transforma essa decisão numa chamada estruturada:
+O `choose` transforma essa decisão numa chamada estruturada:
 
 - A resposta é uma das opções que você passou.
 - Cada opção recebe uma probabilidade.
@@ -74,7 +74,7 @@ Troque as opções por nomes de modelos e você tem roteamento de modelo. Quando
 
 ```mermaid
 flowchart LR
-    A[Agente<br/>Claude Code, Codex, Hermes...] -- "jev_choose(context, question, options)" --> S[jev-filter-mcp]
+    A[Agente<br/>Claude Code, Codex, Hermes...] -- "choose(context, question, options)" --> S[choose-mcp]
     S -- "backend llm: POST /chat/completions<br/>(logprobs)" --> L[(LLM compatível com OpenAI<br/>Ollama, llama.cpp, vLLM, OpenAI)]
     S -- "backend typesafe: POST /v1/systemone" --> J[(API TypeSafe<br/>modelo Jev)]
     L -- probabilidades --> S
@@ -94,7 +94,7 @@ Como cada backend responde:
 | | `typesafe` | `llm` |
 | --- | --- | --- |
 | `single` | uma pergunta `choice` | uma chamada, opções rotuladas A-Z (até 26), probabilidades dos logprobs do primeiro token da resposta |
-| `multi` | uma pergunta `noul` por opção, numa só requisição | uma chamada Sim/Não por opção, em paralelo (`JEV_LLM_CONCURRENCY`) |
+| `multi` | uma pergunta `noul` por opção, numa só requisição | uma chamada Sim/Não por opção, em paralelo (`CHOOSE_LLM_CONCURRENCY`) |
 | Opções | 2 a 255 | `single`: 2 a 26. `multi`: 2 a 255 |
 | Calibração | feita pelo modelo | por sua conta (veja [Calibração](#calibração)) |
 
@@ -126,7 +126,7 @@ Como cada backend responde:
 
 ### Escolhendo o backend
 
-| `JEV_BACKEND` | `TYPESAFE_API_KEY` | `JEV_LLM_MODEL` | Backend |
+| `CHOOSE_BACKEND` | `TYPESAFE_API_KEY` | `CHOOSE_LLM_MODEL` | Backend |
 | --- | --- | --- | --- |
 | `typesafe` ou `llm` | qualquer | qualquer | o que você definiu |
 | (vazio) | definida | qualquer | `typesafe` (quem já usa continua funcionando) |
@@ -137,18 +137,18 @@ Como cada backend responde:
 
 | Variável | Backend | Padrão | Descrição |
 | --- | --- | --- | --- |
-| `JEV_BACKEND` | ambos | auto | `typesafe` ou `llm` |
-| `JEV_THRESHOLD` | ambos | `0.6` | confiança mínima antes de marcar `uncertain`, entre 0 e 1 |
+| `CHOOSE_BACKEND` | ambos | auto | `typesafe` ou `llm` |
+| `CHOOSE_THRESHOLD` | ambos | `0.6` | confiança mínima antes de marcar `uncertain`, entre 0 e 1 |
 | `TYPESAFE_API_KEY` | typesafe | | chave da API TypeSafe (obrigatória neste backend) |
 | `JEV_MODEL` | typesafe | `jev-latest` | versão do modelo |
 | `TYPESAFE_BASE_URL` | typesafe | `https://api.typesafe.ai` | URL da API, usada nos testes |
-| `JEV_LLM_MODEL` | llm | | nome do modelo, ex.: `qwen2.5:7b-instruct` ou `gpt-4.1-mini` (obrigatória neste backend) |
-| `JEV_LLM_BASE_URL` | llm | `http://localhost:11434/v1` | qualquer `/v1` compatível com OpenAI |
-| `JEV_LLM_API_KEY` | llm | | enviada como Bearer quando definida |
-| `JEV_LLM_TEMPERATURE` | llm | `1` | temperature scaling para calibrar (não é a temperatura de amostragem) |
-| `JEV_LLM_SAMPLES` | llm | `0` | `N > 0` estima por amostragem quando a API não devolve logprobs |
-| `JEV_LLM_CONCURRENCY` | llm | `4` | chamadas paralelas no modo `multi` |
-| `JEV_LLM_TIMEOUT_MS` | llm | `60000` | timeout por chamada |
+| `CHOOSE_LLM_MODEL` | llm | | nome do modelo, ex.: `qwen2.5:7b-instruct` ou `gpt-4.1-mini` (obrigatória neste backend) |
+| `CHOOSE_LLM_BASE_URL` | llm | `http://localhost:11434/v1` | qualquer `/v1` compatível com OpenAI |
+| `CHOOSE_LLM_API_KEY` | llm | | enviada como Bearer quando definida |
+| `CHOOSE_LLM_TEMPERATURE` | llm | `1` | temperature scaling para calibrar (não é a temperatura de amostragem) |
+| `CHOOSE_LLM_SAMPLES` | llm | `0` | `N > 0` estima por amostragem quando a API não devolve logprobs |
+| `CHOOSE_LLM_CONCURRENCY` | llm | `4` | chamadas paralelas no modo `multi` |
+| `CHOOSE_LLM_TIMEOUT_MS` | llm | `60000` | timeout por chamada |
 
 ### O backend `llm`
 
@@ -157,11 +157,11 @@ Funciona com servidores que devolvem `logprobs` em `/v1/chat/completions`: model
 - Modelos de raciocínio (o-series, gpt-5) rejeitam `logprobs` e devolvem erro.
 - A probabilidade que o modelo põe **fora** das respostas permitidas reduz a `confidence` no `single` e puxa o score para 0,5 no `multi`, então `uncertain` sobe sozinho.
 - Se o modelo responde inteiramente fora dos rótulos, a chamada falha com erro em vez de chutar.
-- APIs sem logprobs (camada OpenAI da Anthropic) só funcionam com `JEV_LLM_SAMPLES=N`. A confiança passa a andar em passos de 1/N: com `N=5` e limiar 0,6, são necessárias 3 de 5 respostas iguais.
+- APIs sem logprobs (camada OpenAI da Anthropic) só funcionam com `CHOOSE_LLM_SAMPLES=N`. A confiança passa a andar em passos de 1/N: com `N=5` e limiar 0,6, são necessárias 3 de 5 respostas iguais.
 
 ## Calibração
 
-Probabilidade de token não é a mesma coisa que chance de acerto. Modelos ajustados para instruções tendem a ser superconfiantes, então um 0,9 pode valer bem menos. O backend `typesafe` cuida disso sozinho. No `llm`, você ajusta um número, o `JEV_LLM_TEMPERATURE`: acima de 1 suaviza um modelo superconfiante, abaixo de 1 deixa mais incisivo. A escolha nunca muda, só a confiança.
+Probabilidade de token não é a mesma coisa que chance de acerto. Modelos ajustados para instruções tendem a ser superconfiantes, então um 0,9 pode valer bem menos. O backend `typesafe` cuida disso sozinho. No `llm`, você ajusta um número, o `CHOOSE_LLM_TEMPERATURE`: acima de 1 suaviza um modelo superconfiante, abaixo de 1 deixa mais incisivo. A escolha nunca muda, só a confiança.
 
 Escreva de 50 a 200 decisões reais com a resposta certa, um JSON por linha (veja [`scripts/calib.example.jsonl`](scripts/calib.example.jsonl)):
 
@@ -172,10 +172,10 @@ Escreva de 50 a 200 decisões reais com a resposta certa, um JSON por linha (vej
 Depois rode:
 
 ```bash
-JEV_LLM_MODEL=qwen2.5:7b-instruct npm run calibrate -- calib.jsonl
+CHOOSE_LLM_MODEL=qwen2.5:7b-instruct npm run calibrate -- calib.jsonl
 ```
 
-Ele mostra a acurácia, o ECE antes e depois, o `JEV_LLM_TEMPERATURE` a usar, e uma tabela de `JEV_THRESHOLD` contra quantas decisões ficam automáticas e com qual acurácia. Escolha o menor limiar que dá a acurácia que você aceita.
+Ele mostra a acurácia, o ECE antes e depois, o `CHOOSE_LLM_TEMPERATURE` a usar, e uma tabela de `CHOOSE_THRESHOLD` contra quantas decisões ficam automáticas e com qual acurácia. Escolha o menor limiar que dá a acurácia que você aceita.
 
 - O resultado vale para aquele modelo e aquele prompt. Recalibre se um dos dois mudar.
 - Calibra só o modo `single`.
@@ -187,9 +187,9 @@ Ele mostra a acurácia, o ECE antes e depois, o `JEV_LLM_TEMPERATURE` a usar, e 
 <summary><b>Claude Code</b></summary>
 
 ```bash
-claude mcp add jev --scope user -e JEV_LLM_MODEL=qwen2.5:7b-instruct -- node /caminho/para/jev-mcp/dist/index.js
+claude mcp add choose --scope user -e CHOOSE_LLM_MODEL=qwen2.5:7b-instruct -- node /caminho/para/choose-mcp/dist/index.js
 # ou, com o Jev:
-claude mcp add jev --scope user -e TYPESAFE_API_KEY=sua-chave -- node /caminho/para/jev-mcp/dist/index.js
+claude mcp add choose --scope user -e TYPESAFE_API_KEY=sua-chave -- node /caminho/para/choose-mcp/dist/index.js
 ```
 
 </details>
@@ -199,10 +199,10 @@ claude mcp add jev --scope user -e TYPESAFE_API_KEY=sua-chave -- node /caminho/p
 
 ```toml
 # ~/.codex/config.toml
-[mcp_servers.jev]
+[mcp_servers.choose]
 command = "node"
-args = ["/caminho/para/jev-mcp/dist/index.js"]
-env = { JEV_LLM_MODEL = "qwen2.5:7b-instruct" }   # ou { TYPESAFE_API_KEY = "sua-chave" }
+args = ["/caminho/para/choose-mcp/dist/index.js"]
+env = { CHOOSE_LLM_MODEL = "qwen2.5:7b-instruct" }   # ou { TYPESAFE_API_KEY = "sua-chave" }
 ```
 
 </details>
@@ -214,11 +214,11 @@ O Hermes não repassa variáveis de ambiente para servidores MCP. Coloque-as no 
 
 ```yaml
 mcp_servers:
-  jev:
+  choose:
     command: "node"
-    args: ["/caminho/para/jev-mcp/dist/index.js"]
+    args: ["/caminho/para/choose-mcp/dist/index.js"]
     env:
-      JEV_LLM_MODEL: "qwen2.5:7b-instruct"   # ou TYPESAFE_API_KEY: "sua-chave"
+      CHOOSE_LLM_MODEL: "qwen2.5:7b-instruct"   # ou TYPESAFE_API_KEY: "sua-chave"
 ```
 
 Depois rode `/reload-mcp` no chat.
@@ -235,18 +235,18 @@ O OpenBot executa os agentes pelas CLIs (Claude Code, Codex e outras). Registre 
 > [!TIP]
 > Com `uncertain: true` e sem regra, o agente para e mostra as opções a você. Para deixá-lo decidir sozinho, adicione às instruções dele:
 > ```text
-> Quando jev_choose retornar uncertain=true, siga com a opção de maior probabilidade e registre isso na resposta.
+> Quando choose retornar uncertain=true, siga com a opção de maior probabilidade e registre isso na resposta.
 > ```
 
 ## Estrutura
 
 ```text
-jev-mcp/
+choose-mcp/
 ├── src/
 │   ├── index.ts      # servidor MCP, schema da ferramenta, escolha do backend e chamada ao Jev
 │   └── llm.ts        # backend llm: logprobs, temperature scaling, fallback por amostragem
 ├── scripts/
-│   ├── calibrate.mjs         # acha o JEV_LLM_TEMPERATURE e um limiar a partir de exemplos rotulados
+│   ├── calibrate.mjs         # acha o CHOOSE_LLM_TEMPERATURE e um limiar a partir de exemplos rotulados
 │   └── calib.example.jsonl   # exemplo de entrada
 ├── test/
 │   └── e2e.mjs       # API TypeSafe e compatível com OpenAI falsas + cliente MCP real via stdio
@@ -258,17 +258,17 @@ jev-mcp/
 
 - **Duas dependências**: o SDK oficial do MCP e o Zod. O HTTP usa o `fetch` nativo do Node.
 - **Backends sem abstração**: duas funções com a mesma assinatura, escolhidas por um `if`. O `llm.ts` é um arquivo separado porque o `index.ts` sobe o servidor ao ser importado, o que impediria testar as funções puras.
-- **Validação na borda**: o Zod rejeita menos de 2 ou mais de 255 opções, e limiar fora de 0 a 1, antes de o servidor gastar uma chamada de API. Um `JEV_THRESHOLD` inválido derruba o servidor na partida em vez de desligar o `uncertain` em silêncio.
+- **Validação na borda**: o Zod rejeita menos de 2 ou mais de 255 opções, e limiar fora de 0 a 1, antes de o servidor gastar uma chamada de API. Um `CHOOSE_THRESHOLD` inválido derruba o servidor na partida em vez de desligar o `uncertain` em silêncio.
 - **Dúvida não é descartada**: massa de logprob fora dos rótulos permitidos conta como incerteza, então o formato de saída não precisa de campo extra.
 - **Erros como resultado**: falhas da API voltam ao agente como `isError`, e ele pode tentar de novo ou avisar você. O backend `llm` tenta 429 e 5xx duas vezes antes de falhar.
 - **Teste ponta a ponta de graça**: `npm test` sobe um servidor local que imita as duas APIs, conecta um cliente MCP real e valida os dois modos, os dois backends e os casos de erro.
 
 ## Histórico de estrelas
 
-<a href="https://star-history.com/#PedroRamosPereira/jev-mcp&Date">
+<a href="https://star-history.com/#PedroRamosPereira/choose-mcp&Date">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=PedroRamosPereira/jev-mcp&type=Date&theme=dark">
-    <img alt="Histórico de estrelas" src="https://api.star-history.com/svg?repos=PedroRamosPereira/jev-mcp&type=Date" width="600">
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=PedroRamosPereira/choose-mcp&type=Date&theme=dark">
+    <img alt="Histórico de estrelas" src="https://api.star-history.com/svg?repos=PedroRamosPereira/choose-mcp&type=Date" width="600">
   </picture>
 </a>
 

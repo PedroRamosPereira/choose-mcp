@@ -1,5 +1,5 @@
 {
-  "name": "jev-filter-mcp",
+  "name": "choose-mcp",
   "version": "1.0.0",
   "description": "MCP server that uses TypeSafe's Jev model as a decision filter for AI agents: routing, selection and filtering with confidence scores.",
   "keywords": [
@@ -16,11 +16,11 @@
   "license": "ISC",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/PedroRamosPereira/jev-mcp.git"
+    "url": "git+https://github.com/PedroRamosPereira/choose-mcp.git"
   },
   "type": "module",
   "bin": {
-    "jev-filter-mcp": "dist/index.js"
+    "choose-mcp": "dist/index.js"
   },
   "files": [
     "dist"

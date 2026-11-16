@@ -49,19 +49,19 @@ await new Promise((r) => api.once("listening", r));
 const BASE = `http://127.0.0.1:${api.address().port}`;
 
 // The developer's shell may carry JEV_*/TYPESAFE_* vars; drop them so each case controls its own config.
-const clean = Object.fromEntries(Object.entries(process.env).filter(([k]) => !/^(JEV_|TYPESAFE_)/.test(k)));
+const clean = Object.fromEntries(Object.entries(process.env).filter(([k]) => !/^(CHOOSE_|JEV_|TYPESAFE_)/.test(k)));
 const clients = [];
 async function connect(env) {
   const c = new Client({ name: "test", version: "0" });
   await c.connect(new StdioClientTransport({ command: "node", args: ["dist/index.js"], env: { ...clean, ...env } }));
   clients.push(c);
-  const raw = (a) => c.callTool({ name: "jev_choose", arguments: a });
+  const raw = (a) => c.callTool({ name: "choose", arguments: a });
   return { raw, call: async (a) => JSON.parse((await raw(a)).content[0].text) };
 }
 
 const SINGLE = { context: { task: "refactor" }, question: "Which agent?", options: { codex: "good at refactoring", claude: "good at writing" } };
 const MULTI = { context: "x", question: "Relevant?", options: { a: "1", b: "2", c: "3" }, mode: "multi" };
-const LLM = { JEV_LLM_BASE_URL: BASE };
+const LLM = { CHOOSE_LLM_BASE_URL: BASE };
 
 // TypeSafe backend (auto-detected from the key: backward compatible).
 {
@@ -76,7 +76,7 @@ const LLM = { JEV_LLM_BASE_URL: BASE };
 
 // LLM backend, explicit.
 {
-  const { call } = await connect({ JEV_BACKEND: "llm", JEV_LLM_MODEL: "fake", ...LLM });
+  const { call } = await connect({ CHOOSE_BACKEND: "llm", CHOOSE_LLM_MODEL: "fake", ...LLM });
   const s = await call(SINGLE);
   assert.equal(s.choice, "codex");
   near(s.probabilities.codex, 0.625);
@@ -90,7 +90,7 @@ const LLM = { JEV_LLM_BASE_URL: BASE };
 }
 
 // LLM backend, auto-detected (no TypeSafe key).
-assert.equal((await (await connect({ JEV_LLM_MODEL: "fake", ...LLM })).call(SINGLE)).choice, "codex");
+assert.equal((await (await connect({ CHOOSE_LLM_MODEL: "fake", ...LLM })).call(SINGLE)).choice, "codex");
 
 // Failure cases come back as isError.
 async function fails(env, args, re) {
@@ -98,17 +98,17 @@ async function fails(env, args, re) {
   assert.ok(r.isError, JSON.stringify(env));
   assert.match(r.content[0].text, re);
 }
-await fails({ JEV_BACKEND: "llm", JEV_LLM_MODEL: "nologprobs", ...LLM }, SINGLE, /logprobs/);
-await fails({ JEV_BACKEND: "llm", JEV_LLM_MODEL: "chatty", ...LLM }, SINGLE, /outside the allowed labels/);
-await fails({ JEV_BACKEND: "llm", JEV_LLM_MODEL: "fail", ...LLM }, SINGLE, /401/);
-await fails({ JEV_BACKEND: "llm", JEV_LLM_MODEL: "fake", ...LLM },
+await fails({ CHOOSE_BACKEND: "llm", CHOOSE_LLM_MODEL: "nologprobs", ...LLM }, SINGLE, /logprobs/);
+await fails({ CHOOSE_BACKEND: "llm", CHOOSE_LLM_MODEL: "chatty", ...LLM }, SINGLE, /outside the allowed labels/);
+await fails({ CHOOSE_BACKEND: "llm", CHOOSE_LLM_MODEL: "fail", ...LLM }, SINGLE, /401/);
+await fails({ CHOOSE_BACKEND: "llm", CHOOSE_LLM_MODEL: "fake", ...LLM },
   { ...SINGLE, options: Object.fromEntries(Array.from({ length: 27 }, (_, i) => [`o${i}`, "x"])) }, /up to 26/);
-await fails({}, SINGLE, /JEV_LLM_MODEL/);
-await fails({ JEV_BACKEND: "foo" }, SINGLE, /JEV_BACKEND/);
+await fails({}, SINGLE, /CHOOSE_LLM_MODEL/);
+await fails({ CHOOSE_BACKEND: "foo" }, SINGLE, /CHOOSE_BACKEND/);
 
 // No logprobs but sampling enabled: 3 samples all answer "B" -> claude.
 {
-  const { call } = await connect({ JEV_BACKEND: "llm", JEV_LLM_MODEL: "nologprobs", JEV_LLM_SAMPLES: "3", ...LLM });
+  const { call } = await connect({ CHOOSE_BACKEND: "llm", CHOOSE_LLM_MODEL: "nologprobs", CHOOSE_LLM_SAMPLES: "3", ...LLM });
   const s = await call(SINGLE);
   assert.equal(s.choice, "claude");
   near(s.confidence, 1);

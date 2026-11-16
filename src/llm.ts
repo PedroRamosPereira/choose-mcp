@@ -3,13 +3,13 @@
 export type Question = { type: "choice" | "noul"; instructions: string; criteria?: Record<string, string> };
 type Top = { token: string; logprob: number };
 
-const BASE = process.env.JEV_LLM_BASE_URL ?? "http://localhost:11434/v1";
-const MODEL = process.env.JEV_LLM_MODEL;
-const KEY = process.env.JEV_LLM_API_KEY;
-const TEMP = Number(process.env.JEV_LLM_TEMPERATURE ?? 1);
-const SAMPLES = Number(process.env.JEV_LLM_SAMPLES ?? 0);
-const CONCURRENCY = Number(process.env.JEV_LLM_CONCURRENCY ?? 4);
-const TIMEOUT = Number(process.env.JEV_LLM_TIMEOUT_MS ?? 60000);
+const BASE = process.env.CHOOSE_LLM_BASE_URL ?? "http://localhost:11434/v1";
+const MODEL = process.env.CHOOSE_LLM_MODEL;
+const KEY = process.env.CHOOSE_LLM_API_KEY;
+const TEMP = Number(process.env.CHOOSE_LLM_TEMPERATURE ?? 1);
+const SAMPLES = Number(process.env.CHOOSE_LLM_SAMPLES ?? 0);
+const CONCURRENCY = Number(process.env.CHOOSE_LLM_CONCURRENCY ?? 4);
+const TIMEOUT = Number(process.env.CHOOSE_LLM_TIMEOUT_MS ?? 60000);
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const SYSTEM = "You are a classifier. Reply with exactly one of the allowed labels and nothing else.";
 
@@ -59,7 +59,7 @@ async function ask(prompt: string, labels: string[]): Promise<Record<string, num
     return labelMass(step.top_logprobs, labels);
   }
   if (!(SAMPLES > 0))
-    throw new Error("The LLM API returned no logprobs. Use a server that exposes them (OpenAI non-reasoning models, vLLM, llama.cpp, Ollama >= 0.12.11) or set JEV_LLM_SAMPLES (e.g. 5) to estimate by sampling.");
+    throw new Error("The LLM API returned no logprobs. Use a server that exposes them (OpenAI non-reasoning models, vLLM, llama.cpp, Ollama >= 0.12.11) or set CHOOSE_LLM_SAMPLES (e.g. 5) to estimate by sampling.");
   // Sampling fallback: each answer weighs 1/N, so labelMass turns counts into frequencies.
   const outs = await Promise.all(Array.from({ length: SAMPLES }, () => chat({ messages, max_tokens: 4, temperature: 1 })));
   return labelMass(outs.map((o) => ({ token: String(o.choices?.[0]?.message?.content ?? ""), logprob: -Math.log(SAMPLES) })), labels);
@@ -71,7 +71,7 @@ export async function massFor(ctx: string, q: Question): Promise<Record<string, 
   const criteria = q.criteria ?? {};
   const names = Object.keys(criteria);
   if (names.length > LETTERS.length)
-    throw new Error(`mode "single" supports up to ${LETTERS.length} options with the llm backend (got ${names.length}). Use mode "multi" or JEV_BACKEND=typesafe.`);
+    throw new Error(`mode "single" supports up to ${LETTERS.length} options with the llm backend (got ${names.length}). Use mode "multi" or CHOOSE_BACKEND=typesafe.`);
   const labels = names.map((_, i) => LETTERS[i]);
   const list = names.map((n, i) => `${labels[i]}) ${n}: ${criteria[n]}`).join("\n");
   const prompt = `Context:\n${ctx}\n\nQuestion: ${q.instructions}\n\nOptions:\n${list}\n\nAnswer with the letter (A-${labels[labels.length - 1]}) of the best option.`;
@@ -104,8 +104,8 @@ async function pool<T, R>(items: T[], limit: number, f: (x: T) => Promise<R>): P
 }
 
 export async function llm(state: unknown, questions: Record<string, Question>): Promise<{ answers: Record<string, any> }> {
-  if (!MODEL) throw new Error("JEV_LLM_MODEL is not set. Example: JEV_LLM_MODEL=qwen2.5:7b-instruct (Ollama) or JEV_LLM_MODEL=gpt-4.1-mini with JEV_LLM_BASE_URL=https://api.openai.com/v1.");
-  if (!(TEMP > 0)) throw new Error("JEV_LLM_TEMPERATURE must be a number > 0");
+  if (!MODEL) throw new Error("CHOOSE_LLM_MODEL is not set. Example: CHOOSE_LLM_MODEL=qwen2.5:7b-instruct (Ollama) or CHOOSE_LLM_MODEL=gpt-4.1-mini with CHOOSE_LLM_BASE_URL=https://api.openai.com/v1.");
+  if (!(TEMP > 0)) throw new Error("CHOOSE_LLM_TEMPERATURE must be a number > 0");
   const ctx = typeof state === "string" ? state : JSON.stringify(state, null, 2);
   const entries = await pool(Object.entries(questions), CONCURRENCY, async ([k, q]) => [k, toAnswer(q, await massFor(ctx, q))] as const);
   return { answers: Object.fromEntries(entries) };

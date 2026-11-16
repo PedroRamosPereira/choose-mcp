@@ -6,14 +6,14 @@ import { llm, type Question } from "./llm.js";
 
 const API = process.env.TYPESAFE_BASE_URL ?? "https://api.typesafe.ai";
 const MODEL = process.env.JEV_MODEL ?? "jev-latest";
-const DEFAULT_THRESHOLD = Number(process.env.JEV_THRESHOLD ?? 0.6);
-if (!(DEFAULT_THRESHOLD >= 0 && DEFAULT_THRESHOLD <= 1)) throw new Error("JEV_THRESHOLD must be a number between 0 and 1");
+const DEFAULT_THRESHOLD = Number(process.env.CHOOSE_THRESHOLD ?? 0.6);
+if (!(DEFAULT_THRESHOLD >= 0 && DEFAULT_THRESHOLD <= 1)) throw new Error("CHOOSE_THRESHOLD must be a number between 0 and 1");
 // Auto-detect: an existing TypeSafe key keeps Jev (backward compatible); otherwise an LLM model selects "llm".
-const BACKEND = process.env.JEV_BACKEND ?? (process.env.TYPESAFE_API_KEY || !process.env.JEV_LLM_MODEL ? "typesafe" : "llm");
+const BACKEND = process.env.CHOOSE_BACKEND ?? (process.env.TYPESAFE_API_KEY || !process.env.CHOOSE_LLM_MODEL ? "typesafe" : "llm");
 
 async function jev(state: unknown, questions: Record<string, Question>) {
   const key = process.env.TYPESAFE_API_KEY;
-  if (!key) throw new Error("TYPESAFE_API_KEY is not set. Set it to use Jev, or set JEV_LLM_MODEL to use an OpenAI-compatible LLM (see README).");
+  if (!key) throw new Error("TYPESAFE_API_KEY is not set. Set it to use Jev, or set CHOOSE_LLM_MODEL to use an OpenAI-compatible LLM (see README).");
   const r = await fetch(`${API}/v1/systemone`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
@@ -26,7 +26,7 @@ async function jev(state: unknown, questions: Record<string, Question>) {
 function engine() {
   if (BACKEND === "typesafe") return jev;
   if (BACKEND === "llm") return llm;
-  throw new Error(`JEV_BACKEND must be "typesafe" or "llm", got "${BACKEND}"`);
+  throw new Error(`CHOOSE_BACKEND must be "typesafe" or "llm", got "${BACKEND}"`);
 }
 
 // "single" mode: one Choice question. "multi" mode: one Noul per option (each option is judged on its own).
@@ -71,10 +71,10 @@ OUTPUT (JSON)
 
 WHEN uncertain = true: follow the uncertainty rule configured for you (decide alone, escalate, etc.). If no rule is configured, DO NOT proceed: show the options and probabilities to the user and wait for their answer.`;
 
-const server = new McpServer({ name: "jev-filter", version: "1.0.0" });
+const server = new McpServer({ name: "choose", version: "1.0.0" });
 
 server.registerTool(
-  "jev_choose",
+  "choose",
   {
     description: DESCRIPTION,
     inputSchema: {
