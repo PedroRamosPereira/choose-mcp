@@ -1,0 +1,2 @@
+{"context": {"task": "Fix a typo in the README"}, "question": "What effort level does this task need?", "options": {"low": "Trivial, mechanical task", "medium": "Regular coding task", "high": "Ambiguous task or hard debugging"}, "answer": "low"}
+{"context": {"task": "Redesign the auth flow across three services"}, "question": "What effort level does this task need?", "options": {"low": "Trivial, mechanical task", "medium": "Regular coding task", "high": "Ambiguous task or hard debugging"}, "answer": "high"}

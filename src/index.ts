@@ -2,16 +2,18 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { llm, type Question } from "./llm.js";
 
 const API = process.env.TYPESAFE_BASE_URL ?? "https://api.typesafe.ai";
 const MODEL = process.env.JEV_MODEL ?? "jev-latest";
 const DEFAULT_THRESHOLD = Number(process.env.JEV_THRESHOLD ?? 0.6);
-
-type Question = { type: "choice" | "noul"; instructions: string; criteria?: Record<string, string> };
+if (!(DEFAULT_THRESHOLD >= 0 && DEFAULT_THRESHOLD <= 1)) throw new Error("JEV_THRESHOLD must be a number between 0 and 1");
+// Auto-detect: an existing TypeSafe key keeps Jev (backward compatible); otherwise an LLM model selects "llm".
+const BACKEND = process.env.JEV_BACKEND ?? (process.env.TYPESAFE_API_KEY || !process.env.JEV_LLM_MODEL ? "typesafe" : "llm");
 
 async function jev(state: unknown, questions: Record<string, Question>) {
   const key = process.env.TYPESAFE_API_KEY;
-  if (!key) throw new Error("TYPESAFE_API_KEY is not set");
+  if (!key) throw new Error("TYPESAFE_API_KEY is not set. Set it to use Jev, or set JEV_LLM_MODEL to use an OpenAI-compatible LLM (see README).");
   const r = await fetch(`${API}/v1/systemone`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
@@ -19,6 +21,12 @@ async function jev(state: unknown, questions: Record<string, Question>) {
   });
   if (!r.ok) throw new Error(`TypeSafe ${r.status}: ${await r.text()}`);
   return (await r.json()) as { answers: Record<string, any> };
+}
+
+function engine() {
+  if (BACKEND === "typesafe") return jev;
+  if (BACKEND === "llm") return llm;
+  throw new Error(`JEV_BACKEND must be "typesafe" or "llm", got "${BACKEND}"`);
 }
 
 // "single" mode: one Choice question. "multi" mode: one Noul per option (each option is judged on its own).
@@ -30,7 +38,7 @@ export async function choose(a: {
   threshold: number;
 }) {
   if (a.mode === "single") {
-    const { answers } = await jev(a.context, {
+    const { answers } = await engine()(a.context, {
       q: { type: "choice", instructions: a.question, criteria: a.options },
     });
     const { choice, confidence, probabilities } = answers.q;
@@ -40,7 +48,7 @@ export async function choose(a: {
   const qs = Object.fromEntries(
     names.map((n, i) => [`o${i}`, { type: "noul" as const, instructions: `${a.question}\nOption under review: "${n}": ${a.options[n]}. Does this option fit?` }]),
   );
-  const { answers } = await jev(a.context, qs);
+  const { answers } = await engine()(a.context, qs);
   const probabilities = Object.fromEntries(names.map((n, i) => [n, answers[`o${i}`].noul as number]));
   const approved = names.filter((n) => probabilities[n] >= 0.5).sort((x, y) => probabilities[y] - probabilities[x]);
   // Noul near 0.5 = real doubt between yes and no. With threshold 0.6, doubtful = between 0.4 and 0.6.
@@ -48,10 +56,10 @@ export async function choose(a: {
   return { approved, probabilities, doubtful, uncertain: doubtful.length > 0 };
 }
 
-const DESCRIPTION = `Choice filter powered by the Jev model (TypeSafe). Use it whenever you need to decide between known options based on context: route a task to an agent, pick the right effort level or model for a task, pick the best result among several, filter the relevant items from a list, or any other "which of these options" decision. Use it at any step where you spot that need, not only at the orchestrator step.
+const DESCRIPTION = `Choice filter with probabilities (backend: TypeSafe's Jev model or any OpenAI-compatible LLM). Use it whenever you need to decide between known options based on context: route a task to an agent, pick the right effort level or model for a task, pick the best result among several, filter the relevant items from a list, or any other "which of these options" decision. Use it at any step where you spot that need, not only at the orchestrator step.
 
 INPUT
-- context: everything the decision needs (text or JSON). Prefer JSON with named fields, e.g. {"task": "...", "agents": [...]}. Jev only sees what is here.
+- context: everything the decision needs (text or JSON). Prefer JSON with named fields, e.g. {"task": "...", "agents": [...]}. The model only sees what is here.
 - question: the decision in natural language, complete and specific.
 - options: object {name: description}. Clear, distinct descriptions. Include a "none" option if nothing might fit.
 - mode: "single" picks exactly one option; "multi" judges each option separately and returns every option that fits (use it to filter lists).

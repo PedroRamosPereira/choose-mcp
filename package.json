@@ -27,7 +27,8 @@
   ],
   "scripts": {
     "build": "tsc",
-    "test": "npm run build && node test/e2e.mjs"
+    "test": "npm run build && node test/e2e.mjs",
+    "calibrate": "npm run build && node scripts/calibrate.mjs"
   },
   "engines": {
     "node": ">=22"
