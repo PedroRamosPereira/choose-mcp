@@ -1,7 +1,7 @@
 {
   "name": "choose-mcp",
   "version": "1.0.0",
-  "description": "MCP server that uses TypeSafe's Jev model as a decision filter for AI agents: routing, selection and filtering with confidence scores.",
+  "description": "MCP server that turns agent decisions into structured calls: routing, selection and filtering with probabilities and an uncertainty flag. Works with any OpenAI-compatible LLM or TypeSafe's Jev.",
   "keywords": [
     "mcp",
     "model-context-protocol",
@@ -27,6 +27,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "prepublishOnly": "npm run build",
     "test": "npm run build && node test/e2e.mjs",
     "calibrate": "npm run build && node scripts/calibrate.mjs"
   },

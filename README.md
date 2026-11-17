@@ -23,19 +23,22 @@ The tool, its input and its output are the same on both.
 
 ## Quick start
 
-```bash
-git clone https://github.com/PedroRamosPereira/choose-mcp.git && cd choose-mcp
-npm install && npm run build
-```
-
-Pick a backend:
+No clone or build needed: the client starts the server through `npx`. Pick a backend:
 
 ```bash
 # Any OpenAI-compatible LLM (here: a local Ollama)
-claude mcp add choose -e CHOOSE_LLM_MODEL=qwen2.5:7b-instruct -- node "$PWD/dist/index.js"
+claude mcp add choose -e CHOOSE_LLM_MODEL=qwen2.5:7b-instruct -- npx -y choose-mcp
 
 # or TypeSafe's Jev
-claude mcp add choose -e TYPESAFE_API_KEY=your-key -- node "$PWD/dist/index.js"
+claude mcp add choose -e TYPESAFE_API_KEY=your-key -- npx -y choose-mcp
+```
+
+To work on the code, run from source instead:
+
+```bash
+git clone https://github.com/PedroRamosPereira/choose-mcp.git && cd choose-mcp
+npm install && npm run build
+claude mcp add choose -e CHOOSE_LLM_MODEL=qwen2.5:7b-instruct -- node "$PWD/dist/index.js"
 ```
 
 ## Why
@@ -187,9 +190,9 @@ It prints accuracy, the ECE before and after, the `CHOOSE_LLM_TEMPERATURE` to us
 <summary><b>Claude Code</b></summary>
 
 ```bash
-claude mcp add choose --scope user -e CHOOSE_LLM_MODEL=qwen2.5:7b-instruct -- node /path/to/choose-mcp/dist/index.js
+claude mcp add choose --scope user -e CHOOSE_LLM_MODEL=qwen2.5:7b-instruct -- npx -y choose-mcp
 # or, with Jev:
-claude mcp add choose --scope user -e TYPESAFE_API_KEY=your-key -- node /path/to/choose-mcp/dist/index.js
+claude mcp add choose --scope user -e TYPESAFE_API_KEY=your-key -- npx -y choose-mcp
 ```
 
 </details>
@@ -200,8 +203,8 @@ claude mcp add choose --scope user -e TYPESAFE_API_KEY=your-key -- node /path/to
 ```toml
 # ~/.codex/config.toml
 [mcp_servers.choose]
-command = "node"
-args = ["/path/to/choose-mcp/dist/index.js"]
+command = "npx"
+args = ["-y", "choose-mcp"]
 env = { CHOOSE_LLM_MODEL = "qwen2.5:7b-instruct" }   # or { TYPESAFE_API_KEY = "your-key" }
 ```
 
@@ -215,8 +218,8 @@ Hermes doesn't forward environment variables to MCP servers. Put them in the `en
 ```yaml
 mcp_servers:
   choose:
-    command: "node"
-    args: ["/path/to/choose-mcp/dist/index.js"]
+    command: "npx"
+    args: ["-y", "choose-mcp"]
     env:
       CHOOSE_LLM_MODEL: "qwen2.5:7b-instruct"   # or TYPESAFE_API_KEY: "your-key"
 ```

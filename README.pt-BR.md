@@ -23,19 +23,22 @@ A ferramenta, a entrada e a saída são as mesmas nos dois.
 
 ## Início rápido
 
-```bash
-git clone https://github.com/PedroRamosPereira/choose-mcp.git && cd choose-mcp
-npm install && npm run build
-```
-
-Escolha um backend:
+Não precisa clonar nem compilar: o cliente sobe o servidor pelo `npx`. Escolha um backend:
 
 ```bash
 # Qualquer LLM compatível com OpenAI (aqui: um Ollama local)
-claude mcp add choose -e CHOOSE_LLM_MODEL=qwen2.5:7b-instruct -- node "$PWD/dist/index.js"
+claude mcp add choose -e CHOOSE_LLM_MODEL=qwen2.5:7b-instruct -- npx -y choose-mcp
 
 # ou o Jev da TypeSafe
-claude mcp add choose -e TYPESAFE_API_KEY=sua-chave -- node "$PWD/dist/index.js"
+claude mcp add choose -e TYPESAFE_API_KEY=sua-chave -- npx -y choose-mcp
+```
+
+Para mexer no código, rode a partir do fonte:
+
+```bash
+git clone https://github.com/PedroRamosPereira/choose-mcp.git && cd choose-mcp
+npm install && npm run build
+claude mcp add choose -e CHOOSE_LLM_MODEL=qwen2.5:7b-instruct -- node "$PWD/dist/index.js"
 ```
 
 ## Por que existe
@@ -187,9 +190,9 @@ Ele mostra a acurácia, o ECE antes e depois, o `CHOOSE_LLM_TEMPERATURE` a usar,
 <summary><b>Claude Code</b></summary>
 
 ```bash
-claude mcp add choose --scope user -e CHOOSE_LLM_MODEL=qwen2.5:7b-instruct -- node /caminho/para/choose-mcp/dist/index.js
+claude mcp add choose --scope user -e CHOOSE_LLM_MODEL=qwen2.5:7b-instruct -- npx -y choose-mcp
 # ou, com o Jev:
-claude mcp add choose --scope user -e TYPESAFE_API_KEY=sua-chave -- node /caminho/para/choose-mcp/dist/index.js
+claude mcp add choose --scope user -e TYPESAFE_API_KEY=sua-chave -- npx -y choose-mcp
 ```
 
 </details>
@@ -200,8 +203,8 @@ claude mcp add choose --scope user -e TYPESAFE_API_KEY=sua-chave -- node /caminh
 ```toml
 # ~/.codex/config.toml
 [mcp_servers.choose]
-command = "node"
-args = ["/caminho/para/choose-mcp/dist/index.js"]
+command = "npx"
+args = ["-y", "choose-mcp"]
 env = { CHOOSE_LLM_MODEL = "qwen2.5:7b-instruct" }   # ou { TYPESAFE_API_KEY = "sua-chave" }
 ```
 
@@ -215,8 +218,8 @@ O Hermes não repassa variáveis de ambiente para servidores MCP. Coloque-as no 
 ```yaml
 mcp_servers:
   choose:
-    command: "node"
-    args: ["/caminho/para/choose-mcp/dist/index.js"]
+    command: "npx"
+    args: ["-y", "choose-mcp"]
     env:
       CHOOSE_LLM_MODEL: "qwen2.5:7b-instruct"   # ou TYPESAFE_API_KEY: "sua-chave"
 ```
