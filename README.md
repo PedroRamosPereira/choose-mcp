@@ -2,6 +2,7 @@
 
 <img src="https://capsule-render.vercel.app/api?type=waving&height=180&color=0:1e293b,100:3178c6&text=choose-mcp&fontColor=ffffff&fontSize=48&fontAlignY=35&desc=Structured%20decisions%20for%20AI%20agents&descAlignY=58" alt="choose-mcp" width="100%">
 
+[![npm](https://img.shields.io/npm/v/choose-mcp?logo=npm&color=CB3837)](https://www.npmjs.com/package/choose-mcp)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-339933?logo=node.js&logoColor=white)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](tsconfig.json)
 [![MCP](https://img.shields.io/badge/MCP-stdio-111111)](https://modelcontextprotocol.io)
