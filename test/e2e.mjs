@@ -67,6 +67,9 @@ const LLM = { CHOOSE_LLM_BASE_URL: BASE };
 {
   const { raw, call } = await connect({ TYPESAFE_API_KEY: "x", TYPESAFE_BASE_URL: BASE });
   assert.match(clients.at(-1).getInstructions() ?? "", /without the user asking/);
+  const [tool] = (await clients.at(-1).listTools()).tools;
+  assert.equal(tool.annotations?.readOnlyHint, true);
+  assert.match(tool.description, /^Route, delegate/);
   const single = await call(SINGLE);
   assert.deepEqual([single.choice, single.uncertain], ["codex", true]);
   const multi = await call(MULTI);

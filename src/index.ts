@@ -56,7 +56,7 @@ export async function choose(a: {
   return { approved, probabilities, doubtful, uncertain: doubtful.length > 0 };
 }
 
-const DESCRIPTION = `Choice filter with probabilities (backend: TypeSafe's Jev model or any OpenAI-compatible LLM). Use it whenever you need to decide between known options based on context: route a task to an agent, pick the right effort level or model for a task, pick the best result among several, filter the relevant items from a list, or any other "which of these options" decision. Use it at any step where you spot that need, not only at the orchestrator step.
+const DESCRIPTION = `Route, delegate, classify, rank or filter: pick between known options and get a probability for each plus an uncertainty flag (backend: TypeSafe's Jev model or any OpenAI-compatible LLM). Use it whenever you need to decide between known options based on context: route a task to an agent, pick the right effort level or model for a task, pick the best result among several, filter the relevant items from a list, or any other "which of these options" decision. Use it at any step where you spot that need, not only at the orchestrator step.
 
 INPUT
 - context: everything the decision needs (text or JSON). Prefer JSON with named fields, e.g. {"task": "...", "agents": [...]}. The model only sees what is here.
@@ -89,7 +89,9 @@ const server = new McpServer({ name: "choose", version: "1.0.0" }, { instruction
 server.registerTool(
   "choose",
   {
+    title: "Choose between options",
     description: DESCRIPTION,
+    annotations: { readOnlyHint: true, openWorldHint: true },
     inputSchema: {
       context: z.union([z.string(), z.record(z.string(), z.unknown()), z.array(z.unknown())]),
       question: z.string().min(1),
