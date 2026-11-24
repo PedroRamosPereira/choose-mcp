@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { createRequire } from "node:module";
 import { z } from "zod";
 import { llm, type Question } from "./llm.js";
 
+const { version } = createRequire(import.meta.url)("../package.json") as { version: string };
 const API = process.env.TYPESAFE_BASE_URL ?? "https://api.typesafe.ai";
 const MODEL = process.env.JEV_MODEL ?? "jev-latest";
 const DEFAULT_THRESHOLD = Number(process.env.CHOOSE_THRESHOLD ?? 0.6);
@@ -87,7 +89,7 @@ Do NOT call it when there is only one reasonable option, the user already decide
 
 Put every fact the decision needs in "context" (JSON with named fields), write distinct option descriptions and add a "none" option when nothing may fit. If the result has uncertain=true, follow your configured rule; with no rule, show the options and probabilities to the user and wait.`;
 
-const server = new McpServer({ name: "choose", version: "1.0.0" }, { instructions: INSTRUCTIONS });
+const server = new McpServer({ name: "choose", version }, { instructions: INSTRUCTIONS });
 
 server.registerTool(
   "choose",

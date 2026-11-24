@@ -1,5 +1,6 @@
 // End-to-end test: one fake server mimics the TypeSafe API and an OpenAI-compatible LLM; calls go through a real MCP client.
 import http from "node:http";
+import fs from "node:fs";
 import assert from "node:assert";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -66,6 +67,7 @@ const LLM = { CHOOSE_LLM_BASE_URL: BASE };
 // TypeSafe backend (auto-detected from the key: backward compatible).
 {
   const { raw, call } = await connect({ TYPESAFE_API_KEY: "x", TYPESAFE_BASE_URL: BASE });
+  assert.equal(clients.at(-1).getServerVersion()?.version, JSON.parse(fs.readFileSync("package.json")).version);
   assert.match(clients.at(-1).getInstructions() ?? "", /without the user asking/);
   const [tool] = (await clients.at(-1).listTools()).tools;
   assert.equal(tool.annotations?.readOnlyHint, true);
