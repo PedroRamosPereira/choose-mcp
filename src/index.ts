@@ -10,6 +10,9 @@ const DEFAULT_THRESHOLD = Number(process.env.CHOOSE_THRESHOLD ?? 0.6);
 if (!(DEFAULT_THRESHOLD >= 0 && DEFAULT_THRESHOLD <= 1)) throw new Error("CHOOSE_THRESHOLD must be a number between 0 and 1");
 // Auto-detect: an existing TypeSafe key keeps Jev (backward compatible); otherwise an LLM model selects "llm".
 const BACKEND = process.env.CHOOSE_BACKEND ?? (process.env.TYPESAFE_API_KEY || !process.env.CHOOSE_LLM_MODEL ? "typesafe" : "llm");
+// Tool calls still fail with a clear error; this makes a broken install visible in the client's MCP logs right away.
+if (!process.env.TYPESAFE_API_KEY && !process.env.CHOOSE_LLM_MODEL)
+  console.error("choose-mcp: no backend configured. Set CHOOSE_LLM_MODEL (OpenAI-compatible LLM) or TYPESAFE_API_KEY (Jev); every call will fail until then.");
 
 async function jev(state: unknown, questions: Record<string, Question>) {
   const key = process.env.TYPESAFE_API_KEY;
