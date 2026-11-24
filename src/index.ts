@@ -71,7 +71,20 @@ OUTPUT (JSON)
 
 WHEN uncertain = true: follow the uncertainty rule configured for you (decide alone, escalate, etc.). If no rule is configured, DO NOT proceed: show the options and probabilities to the user and wait for their answer.`;
 
-const server = new McpServer({ name: "choose", version: "1.0.0" });
+// Sent in the MCP handshake; clients put it in the model's system prompt even when tool schemas are deferred.
+const INSTRUCTIONS = `choose-mcp turns "which of these options?" decisions into one call that returns probabilities and an uncertainty flag.
+
+Call the choose tool on your own, without the user asking, when:
+- you are about to delegate a task to an agent, subagent or model and more than one could take it;
+- you must pick an effort level, model tier or strategy before acting;
+- you must pick the best of several results, drafts or candidates;
+- you must filter or classify a list of items by relevance (mode "multi").
+
+Do NOT call it when there is only one reasonable option, the user already decided, the decision is trivial and easy to undo, or the question has no fixed set of options.
+
+Put every fact the decision needs in "context" (JSON with named fields), write distinct option descriptions and add a "none" option when nothing may fit. If the result has uncertain=true, follow your configured rule; with no rule, show the options and probabilities to the user and wait.`;
+
+const server = new McpServer({ name: "choose", version: "1.0.0" }, { instructions: INSTRUCTIONS });
 
 server.registerTool(
   "choose",

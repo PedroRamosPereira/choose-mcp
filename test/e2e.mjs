@@ -66,6 +66,7 @@ const LLM = { CHOOSE_LLM_BASE_URL: BASE };
 // TypeSafe backend (auto-detected from the key: backward compatible).
 {
   const { raw, call } = await connect({ TYPESAFE_API_KEY: "x", TYPESAFE_BASE_URL: BASE });
+  assert.match(clients.at(-1).getInstructions() ?? "", /without the user asking/);
   const single = await call(SINGLE);
   assert.deepEqual([single.choice, single.uncertain], ["codex", true]);
   const multi = await call(MULTI);
