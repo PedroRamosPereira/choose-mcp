@@ -99,11 +99,19 @@ server.registerTool(
       mode: z.enum(["single", "multi"]).default("single"),
       threshold: z.number().min(0).max(1).optional(),
     },
+    outputSchema: {
+      choice: z.string().optional(),
+      confidence: z.number().optional(),
+      approved: z.array(z.string()).optional(),
+      doubtful: z.array(z.string()).optional(),
+      probabilities: z.record(z.string(), z.number()),
+      uncertain: z.boolean(),
+    },
   },
   async (args) => {
     try {
       const r = await choose({ ...args, threshold: args.threshold ?? DEFAULT_THRESHOLD });
-      return { content: [{ type: "text", text: JSON.stringify(r) }] };
+      return { structuredContent: r, content: [{ type: "text", text: JSON.stringify(r) }] };
     } catch (e) {
       return { isError: true, content: [{ type: "text", text: String(e) }] };
     }

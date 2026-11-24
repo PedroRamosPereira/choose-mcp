@@ -72,6 +72,7 @@ const LLM = { CHOOSE_LLM_BASE_URL: BASE };
   assert.match(tool.description, /^Route, delegate/);
   const single = await call(SINGLE);
   assert.deepEqual([single.choice, single.uncertain], ["codex", true]);
+  assert.deepEqual((await raw(SINGLE)).structuredContent, single);
   const multi = await call(MULTI);
   assert.deepEqual(multi.approved, ["a", "b"]);
   assert.deepEqual(multi.doubtful, ["b"]);
