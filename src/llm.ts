@@ -82,9 +82,10 @@ export async function massFor(ctx: string, q: Question): Promise<Record<string, 
 function toAnswer(q: Question, mass: Record<string, number>) {
   const coverage = Math.min(1, Object.values(mass).reduce((s, v) => s + v, 0));
   if (coverage < 1e-6) throw new Error("The LLM answered outside the allowed labels. Use an instruct model or disable thinking.");
-  const p = scale(mass, TEMP);
   // Mass outside the labels means the model wanted to say something else: count it as doubt.
-  if (q.type === "noul") return { noul: coverage * p.Yes + (1 - coverage) * 0.5 };
+  // CHOOSE_LLM_TEMPERATURE is fitted on "single" decisions only (scripts/calibrate.mjs), so Yes/No stays unscaled.
+  if (q.type === "noul") return { noul: coverage * scale(mass, 1).Yes + (1 - coverage) * 0.5 };
+  const p = scale(mass, TEMP);
   const choice = Object.keys(p).reduce((a, b) => (p[b] > p[a] ? b : a));
   return { choice, confidence: p[choice] * coverage, probabilities: p };
 }

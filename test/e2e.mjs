@@ -96,6 +96,13 @@ const LLM = { CHOOSE_LLM_BASE_URL: BASE };
   near(mu.probabilities.c, 0.1);
 }
 
+// Calibration temperature changes "single" confidence only, never the Yes/No scores of "multi".
+{
+  const { call } = await connect({ CHOOSE_BACKEND: "llm", CHOOSE_LLM_MODEL: "fake", CHOOSE_LLM_TEMPERATURE: "3", ...LLM });
+  assert.ok((await call(SINGLE)).probabilities.codex < 0.625);
+  near((await call(MULTI)).probabilities.b, 0.55);
+}
+
 // LLM backend, auto-detected (no TypeSafe key).
 assert.equal((await (await connect({ CHOOSE_LLM_MODEL: "fake", ...LLM })).call(SINGLE)).choice, "codex");
 
