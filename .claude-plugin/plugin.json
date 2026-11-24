@@ -1,0 +1,16 @@
+{
+  "name": "choose",
+  "version": "1.0.0",
+  "description": "Structured decisions for agents: routing, effort and model selection, best-result picking and list filtering with probabilities and an uncertainty flag.",
+  "author": { "name": "Pedro Ramos Pereira" },
+  "homepage": "https://github.com/PedroRamosPereira/choose-mcp",
+  "repository": "https://github.com/PedroRamosPereira/choose-mcp",
+  "license": "ISC",
+  "keywords": ["mcp", "routing", "delegation", "decision", "probabilities"],
+  "userConfig": {
+    "llm_model": { "type": "string", "title": "LLM model", "description": "OpenAI-compatible model name, e.g. qwen2.5:7b-instruct. Leave empty to use Jev.", "required": false, "default": "" },
+    "llm_base_url": { "type": "string", "title": "LLM base URL", "description": "OpenAI-compatible /v1 URL", "required": false, "default": "http://localhost:11434/v1" },
+    "llm_api_key": { "type": "string", "title": "LLM API key", "description": "Bearer token for the LLM API, if it needs one", "required": false, "sensitive": true, "default": "" },
+    "typesafe_api_key": { "type": "string", "title": "TypeSafe API key", "description": "Key for TypeSafe's Jev. Leave empty to use the LLM backend.", "required": false, "sensitive": true, "default": "" }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "choose-mcp",
+  "description": "choose-mcp: structured decisions for AI agents.",
+  "owner": {
+    "name": "Pedro Ramos Pereira"
+  },
+  "plugins": [
+    {
+      "name": "choose",
+      "source": "./",
+      "description": "Structured decisions for agents with probabilities and an uncertainty flag."
+    }
+  ]
+}
