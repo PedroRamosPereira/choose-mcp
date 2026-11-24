@@ -34,6 +34,15 @@ claude mcp add choose -e CHOOSE_LLM_MODEL=qwen2.5:7b-instruct -- npx -y choose-m
 claude mcp add choose -e TYPESAFE_API_KEY=your-key -- npx -y choose-mcp
 ```
 
+### As a Claude Code plugin (server + skill)
+
+```text
+/plugin marketplace add PedroRamosPereira/choose-mcp
+/plugin install choose@choose-mcp
+```
+
+The plugin registers the MCP server and adds a `choose` skill that teaches the agent when and how to call the tool. It asks for the backend settings (LLM model and URL, or TypeSafe key); change them later with `claude plugin configure choose`.
+
 To work on the code, run from source instead:
 
 ```bash
@@ -91,7 +100,7 @@ flowchart LR
 | `single` | one `choice` question with every option | routing, picking the best result | `{ choice, confidence, probabilities, uncertain }` |
 | `multi` | one yes/no question per option | filtering a list | `{ approved, probabilities, doubtful, uncertain }` |
 
-In `multi` mode, an option passes at probability 0.5 or higher. Scores near 0.5 signal doubt: with a 0.6 threshold, anything between 0.4 and 0.6 lands in `doubtful`.
+In `multi` mode, an option passes at probability 0.5 or higher. Scores near 0.5 signal doubt: with a 0.6 threshold, anything between 0.4 and 0.6 lands in `doubtful`. A threshold of 0.5 or lower turns `doubtful` off, just as it never flags a two-option `single` decision (its confidence is always at least 0.5).
 
 How each backend answers:
 
@@ -161,6 +170,7 @@ It works with servers that return `logprobs` on `/v1/chat/completions`: OpenAI m
 - Reasoning models (o-series, gpt-5) reject `logprobs` and return an error.
 - Probability the model puts **outside** the allowed answers lowers `confidence` in `single` and pulls the score toward 0.5 in `multi`, so `uncertain` rises on its own.
 - If the model answers entirely outside the allowed labels, the call fails with an error instead of guessing.
+- In `multi` mode each option is one call that resends the whole context, so N options cost N times the context. Keep `context` lean for long lists. Servers with prefix caching (vLLM, llama.cpp) absorb part of the cost, since the context comes first in the prompt.
 - APIs without logprobs (Anthropic's OpenAI layer) only work with `CHOOSE_LLM_SAMPLES=N`. Confidence then moves in steps of 1/N, so with `N=5` and a 0.6 threshold you need 3 of 5 matching answers.
 
 ## Calibration
@@ -182,7 +192,7 @@ CHOOSE_LLM_MODEL=qwen2.5:7b-instruct npm run calibrate -- calib.jsonl
 It prints accuracy, the ECE before and after, the `CHOOSE_LLM_TEMPERATURE` to use, and a table of `CHOOSE_THRESHOLD` against how many decisions stay automatic and how accurate they are. Pick the lowest threshold that gives the accuracy you accept.
 
 - The result holds for that model and that prompt. Recalibrate if either changes.
-- It calibrates `single` mode only.
+- It calibrates `single` mode only. `multi` scores are never scaled by `CHOOSE_LLM_TEMPERATURE`.
 - If T lands on the edge of the search range (0.25 to 5), the script warns you: you probably need more examples, or the model fits the task poorly.
 
 ## Client setup
@@ -242,12 +252,30 @@ OpenBot runs agents through their CLIs (Claude Code, Codex and others). Register
 > When choose returns uncertain=true, go with the highest-probability option and note that in your answer.
 > ```
 
+## Letting the agent use it on its own
+
+The agent should call `choose` when a decision shows up, without you naming the tool. Three layers handle that:
+
+1. **Server instructions** (every MCP client): the server sends a short "when to call, when not to" guide in the MCP handshake. Clients such as Claude Code put it in the model's system prompt, even when tool schemas are deferred.
+2. **Skill** (Claude Code plugin): the `choose` skill loads on demand and teaches how to build a good call, with ready-made patterns for routing, effort and filtering.
+3. **A rule in your instructions** (any client, e.g. `CLAUDE.md` or `AGENTS.md`):
+
+```text
+Before delegating a task, picking an effort level or model, choosing among results or filtering a list, call the choose tool instead of deciding in your head. Skip it when only one option is reasonable.
+```
+
+The guide also tells the agent when **not** to call it: every call goes to another model, so trivial or already-decided choices stay with the agent.
+
 ## Project structure
 
 ```text
 choose-mcp/
+├── .claude-plugin/   # Claude Code plugin and marketplace manifests
+├── .mcp.json         # MCP server registration used by the plugin
+├── skills/choose/
+│   └── SKILL.md      # skill: when and how to call choose
 ├── src/
-│   ├── index.ts      # MCP server, tool schema, backend selection and the Jev call
+│   ├── index.ts      # MCP server, instructions, tool schema, backend selection and the Jev call
 │   └── llm.ts        # llm backend: logprobs, temperature scaling, sampling fallback
 ├── scripts/
 │   ├── calibrate.mjs         # finds CHOOSE_LLM_TEMPERATURE and a threshold from labelled examples
@@ -264,6 +292,7 @@ choose-mcp/
 - **Backends without an abstraction**: two functions with the same signature, picked by one `if`. `llm.ts` is a separate file because `index.ts` starts the server on import, which would make its pure functions untestable.
 - **Validation at the boundary**: Zod rejects fewer than 2 or more than 255 options, and thresholds outside 0 to 1, before the server spends an API call. An invalid `CHOOSE_THRESHOLD` stops the server at startup instead of silently disabling `uncertain`.
 - **Doubt is not discarded**: logprob mass outside the allowed labels counts as uncertainty, so the output format needs no extra field.
+- **Structured output**: the tool declares an `outputSchema` and returns `structuredContent`, so clients can validate the result and agents read typed fields.
 - **Errors as results**: API failures return to the agent as `isError`, so it can retry or tell you. The `llm` backend retries 429 and 5xx twice before failing.
 - **Free end-to-end test**: `npm test` starts a local server that mimics both APIs, connects a real MCP client and checks both modes, both backends and the error cases.
 

@@ -34,6 +34,15 @@ claude mcp add choose -e CHOOSE_LLM_MODEL=qwen2.5:7b-instruct -- npx -y choose-m
 claude mcp add choose -e TYPESAFE_API_KEY=sua-chave -- npx -y choose-mcp
 ```
 
+### Como plugin do Claude Code (servidor + skill)
+
+```text
+/plugin marketplace add PedroRamosPereira/choose-mcp
+/plugin install choose@choose-mcp
+```
+
+O plugin registra o servidor MCP e adiciona uma skill `choose` que ensina o agente quando e como chamar a ferramenta. Ele pede a configuração do backend (modelo e URL do LLM, ou chave da TypeSafe); para mudar depois, use `claude plugin configure choose`.
+
 Para mexer no código, rode a partir do fonte:
 
 ```bash
@@ -91,7 +100,7 @@ flowchart LR
 | `single` | uma pergunta `choice` com todas as opções | roteamento, escolher o melhor resultado | `{ choice, confidence, probabilities, uncertain }` |
 | `multi` | uma pergunta sim/não por opção | filtrar uma lista | `{ approved, probabilities, doubtful, uncertain }` |
 
-No modo `multi`, uma opção passa com probabilidade de 0,5 ou mais. Valores perto de 0,5 indicam dúvida: com limiar 0,6, tudo entre 0,4 e 0,6 vai para `doubtful`.
+No modo `multi`, uma opção passa com probabilidade de 0,5 ou mais. Valores perto de 0,5 indicam dúvida: com limiar 0,6, tudo entre 0,4 e 0,6 vai para `doubtful`. Um limiar de 0,5 ou menos desliga o `doubtful`, assim como nunca marca dúvida numa decisão `single` com duas opções (a confiança dela é sempre de pelo menos 0,5).
 
 Como cada backend responde:
 
@@ -161,6 +170,7 @@ Funciona com servidores que devolvem `logprobs` em `/v1/chat/completions`: model
 - Modelos de raciocínio (o-series, gpt-5) rejeitam `logprobs` e devolvem erro.
 - A probabilidade que o modelo põe **fora** das respostas permitidas reduz a `confidence` no `single` e puxa o score para 0,5 no `multi`, então `uncertain` sobe sozinho.
 - Se o modelo responde inteiramente fora dos rótulos, a chamada falha com erro em vez de chutar.
+- No modo `multi`, cada opção é uma chamada que reenvia o contexto inteiro, então N opções custam N vezes o contexto. Mantenha o `context` enxuto em listas longas. Servidores com cache de prefixo (vLLM, llama.cpp) absorvem parte do custo, porque o contexto vem no início do prompt.
 - APIs sem logprobs (camada OpenAI da Anthropic) só funcionam com `CHOOSE_LLM_SAMPLES=N`. A confiança passa a andar em passos de 1/N: com `N=5` e limiar 0,6, são necessárias 3 de 5 respostas iguais.
 
 ## Calibração
@@ -182,7 +192,7 @@ CHOOSE_LLM_MODEL=qwen2.5:7b-instruct npm run calibrate -- calib.jsonl
 Ele mostra a acurácia, o ECE antes e depois, o `CHOOSE_LLM_TEMPERATURE` a usar, e uma tabela de `CHOOSE_THRESHOLD` contra quantas decisões ficam automáticas e com qual acurácia. Escolha o menor limiar que dá a acurácia que você aceita.
 
 - O resultado vale para aquele modelo e aquele prompt. Recalibre se um dos dois mudar.
-- Calibra só o modo `single`.
+- Calibra só o modo `single`. Os scores do `multi` nunca passam pelo `CHOOSE_LLM_TEMPERATURE`.
 - Se o T cair na borda da faixa de busca (0,25 a 5), o script avisa: provavelmente faltam exemplos, ou o modelo serve mal para a tarefa.
 
 ## Configuração por cliente
@@ -242,12 +252,30 @@ O OpenBot executa os agentes pelas CLIs (Claude Code, Codex e outras). Registre 
 > Quando choose retornar uncertain=true, siga com a opção de maior probabilidade e registre isso na resposta.
 > ```
 
+## Deixando o agente usar sozinho
+
+O agente deve chamar o `choose` quando surge uma decisão, sem você citar a ferramenta. Três camadas cuidam disso:
+
+1. **Instruções do servidor** (qualquer cliente MCP): o servidor manda, no handshake do MCP, um guia curto de quando chamar e quando não chamar. Clientes como o Claude Code colocam esse texto no prompt de sistema do modelo, mesmo quando os schemas das ferramentas ficam adiados.
+2. **Skill** (plugin do Claude Code): a skill `choose` carrega sob demanda e ensina a montar uma boa chamada, com padrões prontos para roteamento, esforço e filtro.
+3. **Uma regra nas suas instruções** (qualquer cliente, por exemplo `CLAUDE.md` ou `AGENTS.md`):
+
+```text
+Antes de delegar uma tarefa, escolher nível de esforço ou modelo, escolher entre resultados ou filtrar uma lista, chame a ferramenta choose em vez de decidir de cabeça. Pule quando só uma opção for razoável.
+```
+
+O guia também diz ao agente quando **não** chamar: cada chamada vai para outro modelo, então escolhas triviais ou já decididas ficam com o próprio agente.
+
 ## Estrutura
 
 ```text
 choose-mcp/
+├── .claude-plugin/   # manifestos do plugin e do marketplace do Claude Code
+├── .mcp.json         # registro do servidor MCP usado pelo plugin
+├── skills/choose/
+│   └── SKILL.md      # skill: quando e como chamar o choose
 ├── src/
-│   ├── index.ts      # servidor MCP, schema da ferramenta, escolha do backend e chamada ao Jev
+│   ├── index.ts      # servidor MCP, instruções, schema da ferramenta, escolha do backend e chamada ao Jev
 │   └── llm.ts        # backend llm: logprobs, temperature scaling, fallback por amostragem
 ├── scripts/
 │   ├── calibrate.mjs         # acha o CHOOSE_LLM_TEMPERATURE e um limiar a partir de exemplos rotulados
@@ -264,6 +292,7 @@ choose-mcp/
 - **Backends sem abstração**: duas funções com a mesma assinatura, escolhidas por um `if`. O `llm.ts` é um arquivo separado porque o `index.ts` sobe o servidor ao ser importado, o que impediria testar as funções puras.
 - **Validação na borda**: o Zod rejeita menos de 2 ou mais de 255 opções, e limiar fora de 0 a 1, antes de o servidor gastar uma chamada de API. Um `CHOOSE_THRESHOLD` inválido derruba o servidor na partida em vez de desligar o `uncertain` em silêncio.
 - **Dúvida não é descartada**: massa de logprob fora dos rótulos permitidos conta como incerteza, então o formato de saída não precisa de campo extra.
+- **Saída estruturada**: a ferramenta declara um `outputSchema` e devolve `structuredContent`, então o cliente valida o resultado e o agente lê campos tipados.
 - **Erros como resultado**: falhas da API voltam ao agente como `isError`, e ele pode tentar de novo ou avisar você. O backend `llm` tenta 429 e 5xx duas vezes antes de falhar.
 - **Teste ponta a ponta de graça**: `npm test` sobe um servidor local que imita as duas APIs, conecta um cliente MCP real e valida os dois modos, os dois backends e os casos de erro.
 
